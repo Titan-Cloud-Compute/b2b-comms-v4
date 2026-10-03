@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../shared/auth.guard';
+import { GENERAL_CHANNELS_ROUTES } from './general-channels/general-channels.routes';
 
 /**
  * Feature route registry.
@@ -16,6 +17,8 @@ import { authGuard } from '../shared/auth.guard';
  * Or add routes here directly.
  */
 export const FEATURE_ROUTES: Routes = [
+  // Story: General Channels (must be before `projects` parent to take precedence)
+  ...GENERAL_CHANNELS_ROUTES,
   // Story: File Explorer
   {
     path: 'projects/:id/files',

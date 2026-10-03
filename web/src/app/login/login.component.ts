@@ -190,37 +190,38 @@ export class LoginComponent {
         password: this.password,
       });
       this.auth.setUser({
-        id: result.id,
-        email: result.email,
-        name: result.email.split('@')[0],
-        role: this.mapRole(result.role),
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.display_name,
+        role: this.mapRole(result.user.role),
+        organizationId: result.user.organization_id,
       });
-      // Route based on role.
-      // on the layout route is the single source of truth and bounces
-      // unfinished-intake users back to their spot in the conversation.
-      if (this.auth.hasAdminRole()) {
-        this.router.navigate(['/admin/overview']);
+      // returnUrl round-trip: when the session-expiry redirect carried the
+      // interrupted destination, resume there instead of the default.
+      // INTERNAL paths only — '/x...' but not '//x' — so the query param
+      // can never become an open redirect.
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+      if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+        this.router.navigateByUrl(returnUrl);
+      } else if (result.landing && result.landing.startsWith('/') && !result.landing.startsWith('//')) {
+        this.router.navigateByUrl(result.landing);
       } else {
-        // returnUrl round-trip: when the session-expiry redirect carried the
-        // interrupted destination (e.g. /integrations), resume there instead
-        // of the default. INTERNAL paths only — '/x...' but not '//x' — so
-        // the query param can never become an open redirect.
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-        if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
-          this.router.navigateByUrl(returnUrl);
-        } else {
-          this.router.navigate(['/dashboard']);
-        }
+        this.router.navigate(['/projects']);
       }
     } catch (err) {
       if (err instanceof UnauthorizedError) {
+        const body = (err as UnauthorizedError).body as Record<string, unknown> | null;
         this.error.set(
-          'Invalid email or password',
+          typeof body?.['error'] === 'string' ? body['error'] : 'Invalid credentials',
         );
       } else if (err instanceof BadRequestError) {
-        this.error.set(
-          'Invalid login data',
-        );
+        const body = (err as BadRequestError).body as Record<string, unknown> | null;
+        const fields = body?.['fields'] as Record<string, string> | null;
+        if (fields?.['email']) this.emailError.set(fields['email']);
+        if (fields?.['password']) this.passwordError.set(fields['password']);
+        if (!fields?.['email'] && !fields?.['password']) {
+          this.error.set('Invalid login data');
+        }
       } else {
         this.error.set(
           'Something went wrong. Please try again.',
@@ -233,23 +234,12 @@ export class LoginComponent {
 
   /**
    * Preview-only sign-in: set the session locally and go to the authenticated
-   * home. An address containing "admin" lands on the admin overview so both
-   * shells stay reviewable from the one form.
+   * project list.
    */
   private previewSignIn() {
-    const isAdmin = /admin/i.test(this.email);
     const name = this.email.split('@')[0];
-    this.auth.setUser(
-      isAdmin
-        ? { id: 'preview-admin', email: this.email, name, role: 'ADMIN' }
-        : {
-            id: 'preview-user',
-            email: this.email,
-            name,
-            role: 'USER',
-          },
-    );
-    this.router.navigate([isAdmin ? '/admin/overview' : '/dashboard']);
+    this.auth.setUser({ id: 'preview-user', email: this.email, name, role: 'USER' });
+    this.router.navigate(['/projects']);
   }
 
   private mapRole(

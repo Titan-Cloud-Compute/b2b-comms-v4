@@ -11,12 +11,23 @@ export interface ImpersonationIdentity {
   impersonating: boolean;
 }
 
-export type UserRole = 'ADMIN' | 'USER' | 'SUPER_ADMIN';
+export type UserRole = 'ADMIN' | 'USER' | 'MANAGER' | 'SUPER_ADMIN';
 
 export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
+}
+
+export interface LoginResponse {
+  user: {
+    id: string;
+    email: string;
+    display_name: string;
+    role: string;
+    organization_id: string;
+  };
+  landing: string;
 }
 
 export interface SignupInput {
@@ -56,8 +67,8 @@ export class AuthApi {
     return this.api.post<AuthUser>('auth/signup', input);
   }
 
-  login(input: LoginInput): Promise<AuthUser> {
-    return this.api.post<AuthUser>('auth/login', input);
+  login(input: LoginInput): Promise<LoginResponse> {
+    return this.api.post<LoginResponse>('auth/login', input);
   }
 
   /**

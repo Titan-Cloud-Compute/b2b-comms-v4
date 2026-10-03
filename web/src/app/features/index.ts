@@ -16,6 +16,19 @@ import { authGuard } from '../shared/auth.guard';
  * Or add routes here directly.
  */
 export const FEATURE_ROUTES: Routes = [
+  // Story: File Explorer
+  {
+    path: 'projects/:id/files',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./file-explorer/file-explorer.component').then(m => m.FileExplorerComponent),
+  },
+  {
+    path: 'projects/:id/files/:folderId',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./file-explorer/file-explorer.component').then(m => m.FileExplorerComponent),
+  },
   // Projects and External Organization Spaces
   {
     path: 'projects',

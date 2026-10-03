@@ -29,6 +29,13 @@ export const FEATURE_ROUTES: Routes = [
     loadComponent: () =>
       import('./active-question-chats/active-question-page.component').then(m => m.ActiveQuestionPageComponent),
   },
+  // Story: Message Reference and Annotation (before the 'projects' layout route so it is not swallowed)
+  {
+    path: 'projects/:id/references/:referenceId',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./message-reference-and-annotation/reference-panel.component').then(m => m.ReferencePanelComponent),
+  },
   // Projects and External Organization Spaces
   {
     path: 'projects',

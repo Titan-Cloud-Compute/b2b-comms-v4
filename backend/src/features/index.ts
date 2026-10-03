@@ -14,10 +14,12 @@
 import { FileExplorerModule } from './file-explorer/file-explorer.module';
 import { ProjectsAndExternalOrganizationSpacesModule } from './projects-and-external-organization-spaces/projects-and-external-organization-spaces.module';
 import { ActiveQuestionChatsModule } from './active-question-chats/active-question-chats.module';
+import { MessageReferenceAndAnnotationModule } from './message-reference-and-annotation/message-reference-and-annotation.module';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const FEATURE_MODULES: any[] = [
   FileExplorerModule,
   ProjectsAndExternalOrganizationSpacesModule,
   ActiveQuestionChatsModule,
+  MessageReferenceAndAnnotationModule,
 ];

@@ -57,7 +57,7 @@ describe('ProjectsController', () => {
     const list = await ctrl.list(req(s(employee)));
     expect(list.total).toBe(2);
     expect(list.page).toBe(1);
-    expect(list.items.map((i) => i.organization.name).sort()).toEqual(['Org 1', 'Org 3']);
+    expect(list.items.map((i: { organization: { name: string } }) => i.organization.name).sort()).toEqual(['Org 1', 'Org 3']);
     expect(list.items[0].organization.type).toBe('customer');
     expect((await ctrl.list(req(s(admin)))).total).toBe(5);
   });
@@ -79,7 +79,7 @@ describe('ProjectsController', () => {
     expect((await ctrl.get(req(s(ext)), a.id)).id).toBe(a.id);
     await expect(ctrl.get(req(s(ext)), b.id)).rejects.toBeInstanceOf(ForbiddenException);
     const list = await ctrl.list(req(s(ext)));
-    expect(list.items.map((i) => i.id)).toEqual([a.id]);
+    expect(list.items.map((i: { id: string }) => i.id)).toEqual([a.id]);
   });
 
   it('patch renames a project', async () => {

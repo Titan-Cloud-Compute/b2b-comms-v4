@@ -31,10 +31,11 @@ import {
 /** JWT claims present at runtime after verifyAsync (not in SessionPayload). */
 type SessionClaims = SessionPayload & { iat?: number; exp?: number };
 
-const LoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+/** Where the browser should navigate after a successful login.
+ *  Every role currently lands on /projects; exporting keeps the rule in one place. */
+export function loginLandingFor(_role: string): string {
+  return '/projects';
+}
 const UpdateProfileSchema = z.object({
   name: z.string().min(1).max(120),
 });
@@ -77,10 +78,38 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: unknown, @Res({ passthrough: true }) res: Response) {
-    const parsed = LoginSchema.parse(body);
-    const { user, token } = await this.authService.login(parsed);
+    const raw = (body ?? {}) as Record<string, unknown>;
+    const email = typeof raw.email === 'string' ? raw.email.trim() : '';
+    const password = typeof raw.password === 'string' ? raw.password : '';
+
+    const fields: Record<string, string> = {};
+    if (!email) fields.email = 'Email is required';
+    if (!password) fields.password = 'Password is required';
+    if (Object.keys(fields).length > 0) {
+      const firstMsg = fields.email ?? fields.password!;
+      throw new BadRequestException({ error: firstMsg, fields });
+    }
+
+    // Basic email shape check (must contain @).
+    if (!email.includes('@') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException({
+        error: 'Enter a valid email address',
+        fields: { email: 'Enter a valid email address' },
+      });
+    }
+
+    const { user, token } = await this.authService.login({ email, password });
     this.setSessionCookie(res, token);
-    return { id: user.id, email: user.email, role: user.role };
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        display_name: (user as any).display_name ?? (user as any).name ?? user.email,
+        role: user.role,
+        organization_id: (user as any).organization_id ?? null,
+      },
+      landing: loginLandingFor(user.role),
+    };
   }
 
   @Public()

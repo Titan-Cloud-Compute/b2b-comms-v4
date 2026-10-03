@@ -19,6 +19,10 @@ import { MailerService } from './mailer.service';
 /** Default org seat cap when SystemSetting ORG_MAX_SEATS is unset. */
 const DEFAULT_ORG_MAX_SEATS = 5;
 
+/** Generic 401 message — same for wrong password, unknown email, and
+ *  inactive account so no information about account existence leaks. */
+export const INVALID_CREDENTIALS = 'Invalid credentials';
+
 /** Fallback LLM model ID when no specific model is configured. */
 const DEFAULT_LLM_MODEL_ID = 'gpt-4o-mini';
 
@@ -219,7 +223,7 @@ export class AuthService {
       tx.user.findUnique({ where: { email } }),
     );
     if (!user || !user.passwordHash) {
-      throw new UnauthorizedException('invalid credentials');
+      throw new UnauthorizedException({ error: INVALID_CREDENTIALS });
     }
     let ok = false;
     try {
@@ -227,11 +231,11 @@ export class AuthService {
     } catch {
       ok = false;
     }
-    if (!ok) throw new UnauthorizedException('invalid credentials');
+    if (!ok) throw new UnauthorizedException({ error: INVALID_CREDENTIALS });
     // Deactivated accounts (active === false) are refused with 401. A null
     // `active` (rows created before the column existed) counts as active.
     if (user.active === false) {
-      throw new UnauthorizedException('account is inactive');
+      throw new UnauthorizedException({ error: INVALID_CREDENTIALS });
     }
 
     return { user, token: await this.issueToken(user) };

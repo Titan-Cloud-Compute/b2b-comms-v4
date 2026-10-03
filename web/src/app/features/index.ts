@@ -16,6 +16,19 @@ import { authGuard } from '../shared/auth.guard';
  * Or add routes here directly.
  */
 export const FEATURE_ROUTES: Routes = [
+  // Story: General Channels
+  {
+    path: 'projects/:id/channels/:channelId',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./general-channels/channels-page.component').then(m => m.ChannelsPageComponent),
+  },
+  {
+    path: 'projects/:id/channels',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./general-channels/channels-page.component').then(m => m.ChannelsPageComponent),
+  },
   // Story: Active Question Chats
   {
     path: 'projects/:id/questions',

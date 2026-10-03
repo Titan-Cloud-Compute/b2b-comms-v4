@@ -8,9 +8,11 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import type { SessionPayload } from './session.types';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
+import { PrismaService } from '../prisma/prisma.service';
+import { SESSION_COOKIE_NAME, sessionCookieOptions } from './session-cookie';
 
 /**
  * JwtAuthGuard reads the session cookie (default name 'session'), verifies the
@@ -49,6 +51,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
     private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -59,7 +62,7 @@ export class JwtAuthGuard implements CanActivate {
     if (isPublic) return true;
 
     const req = ctx.switchToHttp().getRequest<Request>();
-    const cookieName = process.env.SESSION_COOKIE_NAME ?? 'session';
+    const cookieName = SESSION_COOKIE_NAME;
     const raw = req.cookies?.[cookieName];
     if (!raw || typeof raw !== 'string') {
       throw new UnauthorizedException('not authenticated');
@@ -71,7 +74,34 @@ export class JwtAuthGuard implements CanActivate {
       this.logger.warn(`JWT verify failed: ${err instanceof Error ? err.message : err}`);
       throw new UnauthorizedException('invalid session');
     }
-    req.session = payload;
+
+    // Re-check the account on every authenticated request so deactivated or
+    // deleted users are rejected immediately (stateless JWTs alone would keep
+    // access until the token expires). Also picks up the live role so a role
+    // change takes effect on the next request without requiring a re-login.
+    const userRow = await this.prisma.runAsAdmin((tx) =>
+      tx.user.findUnique({
+        where: { id: payload.userId },
+        select: { id: true, role: true, active: true, organization_id: true },
+      }),
+    );
+    if (!userRow || userRow.active === false) {
+      // Clear the session cookie so the browser does not keep replaying it.
+      ctx
+        .switchToHttp()
+        .getResponse<Response>()
+        .clearCookie(cookieName, sessionCookieOptions(0));
+      throw new UnauthorizedException({ error: 'Session is no longer valid' });
+    }
+
+    // Populate req.session with the live role and organizationId from the DB
+    // row so RolesGuard and SessionRenewInterceptor always see the current values.
+    req.session = {
+      ...payload,
+      role: userRow.role,
+      organizationId: userRow.organization_id ?? null,
+    };
+
     // Read-only enforcement for impersonation sessions (thrown OUTSIDE the
     // verify try/catch so the 403 is not masked as a 401).
     if (

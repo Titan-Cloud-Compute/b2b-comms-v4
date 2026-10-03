@@ -29,6 +29,19 @@ export const FEATURE_ROUTES: Routes = [
     loadComponent: () =>
       import('./file-explorer/file-explorer.component').then(m => m.FileExplorerComponent),
   },
+  // Story: Active Question Chats
+  {
+    path: 'projects/:id/questions',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./active-question-chats/active-questions.component').then(m => m.ActiveQuestionsComponent),
+  },
+  {
+    path: 'projects/:id/questions/:channelId',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./active-question-chats/active-question-page.component').then(m => m.ActiveQuestionPageComponent),
+  },
   // Projects and External Organization Spaces
   {
     path: 'projects',

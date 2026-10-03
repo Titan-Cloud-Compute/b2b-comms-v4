@@ -16,6 +16,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ChannelsController, ChannelMessagesController } from './channels.controller';
 import { ChannelsService } from './channels.service';
 import { ChannelAccessService } from './channel-access.service';
+import { MessagesService } from './messages.service';
 import { makeFakePrisma, type FakePrisma } from './testing/fake-prisma';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -79,6 +80,7 @@ describe('General Channels API', () => {
       providers: [
         ChannelsService,
         ChannelAccessService,
+        MessagesService,
         { provide: PrismaService, useValue: db },
       ],
     })

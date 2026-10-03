@@ -13,7 +13,6 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { Roles, RequireUser } from '../../auth/roles.guard';
 import type { UserRole } from '@prisma/client';
 import { ChannelsService } from './channels.service';
-import { ChannelAccessService } from './channel-access.service';
 import type { CreateChannelRequest } from './general-channels.types';
 
 /**
@@ -50,22 +49,7 @@ export class ChannelsController {
 }
 
 /**
- * Channel-scoped routes (not project-prefixed).
- * Currently: GET messages with access enforcement.
+ * Re-exported alias kept for backward-compatibility with existing imports.
+ * The real GET :id/messages route lives in MessagesController (messages.controller.ts).
  */
-@UseGuards(JwtAuthGuard)
-@Controller('api/channels')
-export class ChannelMessagesController {
-  constructor(private readonly access: ChannelAccessService) {}
-
-  /** List messages in a channel.
-   *  Returns 403 if the caller cannot access the channel (e.g. external user
-   *  on an internal-only channel). */
-  @Get(':id/messages')
-  @RequireUser()
-  async listMessages(@Req() req: Request, @Param('id') id: string) {
-    await this.access.assertChannelAccess(req.session, id);
-    // Message fetching is owned by a later unit; return a typed placeholder.
-    return { items: [], next_cursor: null };
-  }
-}
+export { MessagesController as ChannelMessagesController } from './messages.controller';

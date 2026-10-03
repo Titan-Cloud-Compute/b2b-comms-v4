@@ -15,6 +15,10 @@ function matches(row: Row, where?: Row): boolean {
     if (cond !== null && typeof cond === 'object' && !(cond instanceof Date)) {
       if ('in' in cond) return (cond.in as unknown[]).includes(val);
       if ('not' in cond) return val !== cond.not;
+      if ('lt' in cond) return val !== null && val < (cond as Row).lt;
+      if ('lte' in cond) return val !== null && val <= (cond as Row).lte;
+      if ('gt' in cond) return val !== null && val > (cond as Row).gt;
+      if ('gte' in cond) return val !== null && val >= (cond as Row).gte;
     }
     return val === cond;
   });
@@ -37,16 +41,28 @@ function makeModel(defaults: Row = {}) {
     async findMany(args?: Row) {
       let out = rows.filter((r) => matches(r, args?.where));
       if (args?.orderBy) {
-        const entries = Object.entries(args.orderBy as Record<string, string>);
-        if (entries.length > 0) {
-          const [key, dir] = entries[0];
+        // Support both a single object { field: dir } and an array [{ field: dir }, ...]
+        const orderList: [string, string][] = Array.isArray(args.orderBy)
+          ? (args.orderBy as Record<string, string>[]).flatMap((o) =>
+              Object.entries(o) as [string, string][],
+            )
+          : (Object.entries(args.orderBy as Record<string, string>) as [string, string][]);
+
+        if (orderList.length > 0) {
           out = [...out].sort((a, b) => {
-            const av = a[key];
-            const bv = b[key];
-            const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-            return dir === 'desc' ? -cmp : cmp;
+            for (const [key, dir] of orderList) {
+              const av = a[key] ?? null;
+              const bv = b[key] ?? null;
+              const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+              if (cmp !== 0) return dir === 'desc' ? -cmp : cmp;
+            }
+            return 0;
           });
         }
+      }
+      // Support Prisma-style `take` (limit rows returned).
+      if (args?.take !== undefined) {
+        out = out.slice(0, args.take as number);
       }
       return out.map((r) => ({ ...r }));
     },

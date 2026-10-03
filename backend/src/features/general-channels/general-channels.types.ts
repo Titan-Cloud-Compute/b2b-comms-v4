@@ -40,3 +40,58 @@ export interface ChannelResponse {
   internal_only: boolean;
   status: string;
 }
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+export interface CreateMessageRequest {
+  body_html?: unknown;
+  attachments?: unknown;
+}
+
+export interface UpdateMessageRequest {
+  body_html?: unknown;
+}
+
+export interface MessageAuthor {
+  id: string;
+  display_name: string;
+}
+
+export interface MessageAttachmentItem {
+  file_id: string;
+  name: string;
+}
+
+export interface MessageItem {
+  id: string;
+  author: MessageAuthor;
+  body_html: string;
+  attachments: MessageAttachmentItem[];
+  reference_id: string | null;
+  edited_at: Date | null;
+  created_at: Date;
+}
+
+export interface MessageListResponse {
+  items: MessageItem[];
+  next_cursor: string | null;
+}
+
+export interface MessageCreatedResponse {
+  id: string;
+  channel_id: string;
+  author_id: string;
+  body_html: string;
+  created_at: Date;
+}
+
+export interface MessageUpdatedResponse {
+  id: string;
+  body_html: string;
+  edited_at: Date;
+}
+
+export interface MessageListQuery {
+  cursor?: unknown;
+  limit?: unknown;
+}

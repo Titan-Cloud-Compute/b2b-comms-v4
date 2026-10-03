@@ -17,6 +17,10 @@ function matches(row: Row, where: Row | undefined): boolean {
     if (cond !== null && typeof cond === 'object' && !(cond instanceof Date)) {
       if ('in' in cond) return (cond.in as unknown[]).includes(v);
       if ('not' in cond) return v !== null && v !== cond.not;
+      if ('lt' in cond) return v !== null && v < (cond.lt as unknown);
+      if ('lte' in cond) return v !== null && v <= (cond.lte as unknown);
+      if ('gt' in cond) return v !== null && v > (cond.gt as unknown);
+      if ('gte' in cond) return v !== null && v >= (cond.gte as unknown);
     }
     return v === cond;
   });
@@ -30,15 +34,21 @@ function model(fill: (r: Row) => Row = (r) => r) {
     rows,
     async findMany(args: Row = {}) {
       let out = rows.filter((r) => matches(r, args.where));
-      if (args.orderBy && typeof args.orderBy === 'object') {
-        const entries = Object.entries(args.orderBy as Record<string, string>);
-        if (entries.length > 0) {
-          const [field, dir] = entries[0];
+      if (args.orderBy) {
+        const sorts: Array<[string, string]> = Array.isArray(args.orderBy)
+          ? (args.orderBy as Record<string, string>[]).map((s) => Object.entries(s)[0] as [string, string])
+          : typeof args.orderBy === 'object'
+            ? [Object.entries(args.orderBy as Record<string, string>)[0] as [string, string]]
+            : [];
+        if (sorts.length > 0) {
           out = [...out].sort((a, b) => {
-            const av = a[field] ?? null;
-            const bv = b[field] ?? null;
-            const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-            return dir === 'desc' ? -cmp : cmp;
+            for (const [field, dir] of sorts) {
+              const av = a[field] ?? null;
+              const bv = b[field] ?? null;
+              const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+              if (cmp !== 0) return dir === 'desc' ? -cmp : cmp;
+            }
+            return 0;
           });
         }
       }

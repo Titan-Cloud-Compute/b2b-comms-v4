@@ -20,7 +20,7 @@ async function mockApi(page: Page, role: Role): Promise<void> {
 
     if (method === 'POST' && apiPath === 'auth/login') {
       signedIn = true;
-      return json(user);
+      return json({ user: { ...user, display_name: user.email.split('@')[0], organization_id: 'org-1' }, landing: '/projects' });
     }
     if (method === 'GET' && apiPath === 'users/me') {
       return signedIn ? json(user) : json({ message: 'Unauthorized' }, 401);
@@ -68,7 +68,7 @@ test('signed-out visit to a shell route is redirected to /login without renderin
 test('USER signs in with the USER role and lands in the shell', async ({ page }) => {
   await mockApi(page, 'USER');
   await signIn(page, 'USER');
-  await expect(page).toHaveURL(/#\/dashboard/, { timeout: 10_000 });
+  await expect(page).toHaveURL(/#\/projects/, { timeout: 10_000 });
   await expect(page.locator('app-layout')).toHaveCount(1);
   expect(await storedRole(page)).toBe('USER');
 });
@@ -76,15 +76,15 @@ test('USER signs in with the USER role and lands in the shell', async ({ page })
 test('MANAGER signs in with the MANAGER role (not downgraded to USER)', async ({ page }) => {
   await mockApi(page, 'MANAGER');
   await signIn(page, 'MANAGER');
-  await expect(page).toHaveURL(/#\/dashboard/, { timeout: 10_000 });
+  await expect(page).toHaveURL(/#\/projects/, { timeout: 10_000 });
   await expect(page.locator('app-layout')).toHaveCount(1);
   expect(await storedRole(page)).toBe('MANAGER');
 });
 
-test('ADMIN signs in with the ADMIN role and lands in admin', async ({ page }) => {
+test('ADMIN signs in with the ADMIN role and lands on projects', async ({ page }) => {
   await mockApi(page, 'ADMIN');
   await signIn(page, 'ADMIN');
-  await expect(page).toHaveURL(/#\/admin/, { timeout: 10_000 });
+  await expect(page).toHaveURL(/#\/projects/, { timeout: 10_000 });
   await expect(page.locator('app-layout')).toHaveCount(1);
   expect(await storedRole(page)).toBe('ADMIN');
 });

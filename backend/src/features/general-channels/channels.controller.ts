@@ -1,10 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +17,7 @@ import { Roles, RequireUser } from '../../auth/roles.guard';
 import type { UserRole } from '@prisma/client';
 import { ChannelsService } from './channels.service';
 import { ChannelAccessService } from './channel-access.service';
+import { MessagesService } from './messages.service';
 import type { CreateChannelRequest } from './general-channels.types';
 
 /**
@@ -51,21 +55,57 @@ export class ChannelsController {
 
 /**
  * Channel-scoped routes (not project-prefixed).
- * Currently: GET messages with access enforcement.
+ * GET/POST messages with access enforcement.
  */
 @UseGuards(JwtAuthGuard)
 @Controller('api/channels')
 export class ChannelMessagesController {
-  constructor(private readonly access: ChannelAccessService) {}
+  constructor(
+    private readonly access: ChannelAccessService,
+    private readonly messages: MessagesService,
+  ) {}
 
-  /** List messages in a channel.
-   *  Returns 403 if the caller cannot access the channel (e.g. external user
-   *  on an internal-only channel). */
+  /** List messages in a channel. */
   @Get(':id/messages')
   @RequireUser()
-  async listMessages(@Req() req: Request, @Param('id') id: string) {
-    await this.access.assertChannelAccess(req.session, id);
-    // Message fetching is owned by a later unit; return a typed placeholder.
-    return { items: [], next_cursor: null };
+  listMessages(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.messages.list(req.session, id, { cursor, limit });
+  }
+
+  /** Post a new message to a channel. */
+  @Post(':id/messages')
+  @HttpCode(201)
+  @RequireUser()
+  postMessage(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    return this.messages.create(req.session, id, body);
+  }
+}
+
+/**
+ * Message-scoped routes: edit and delete own message.
+ */
+@UseGuards(JwtAuthGuard)
+@Controller('api/messages')
+export class MessageActionsController {
+  constructor(private readonly messages: MessagesService) {}
+
+  /** Edit own message. */
+  @Patch(':id')
+  @RequireUser()
+  editMessage(@Req() req: Request, @Param('id') id: string, @Body() body: unknown) {
+    return this.messages.update(req.session, id, body);
+  }
+
+  /** Delete own message (soft-delete). */
+  @Delete(':id')
+  @HttpCode(204)
+  @RequireUser()
+  deleteMessage(@Req() req: Request, @Param('id') id: string) {
+    return this.messages.remove(req.session, id);
   }
 }

@@ -37,16 +37,24 @@ function makeModel(defaults: Row = {}) {
     async findMany(args?: Row) {
       let out = rows.filter((r) => matches(r, args?.where));
       if (args?.orderBy) {
-        const entries = Object.entries(args.orderBy as Record<string, string>);
-        if (entries.length > 0) {
-          const [key, dir] = entries[0];
-          out = [...out].sort((a, b) => {
-            const av = a[key];
-            const bv = b[key];
-            const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-            return dir === 'desc' ? -cmp : cmp;
-          });
-        }
+        // Support both object { key: dir } and array [{ key: dir }, ...]
+        const orderByClauses: Array<Record<string, string>> = Array.isArray(args.orderBy)
+          ? (args.orderBy as Array<Record<string, string>>)
+          : [args.orderBy as Record<string, string>];
+        out = [...out].sort((a, b) => {
+          for (const clause of orderByClauses) {
+            const entries = Object.entries(clause);
+            if (entries.length > 0) {
+              const [key, dir] = entries[0];
+              const av = a[key];
+              const bv = b[key];
+              const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+              const result = dir === 'desc' ? -cmp : cmp;
+              if (result !== 0) return result;
+            }
+          }
+          return 0;
+        });
       }
       return out.map((r) => ({ ...r }));
     },

@@ -185,37 +185,46 @@ export class LoginComponent {
     this.error.set(null);
 
     try {
-      const result = await this.authApi.login({
+      const raw = (await this.authApi.login({
         email: this.email,
         password: this.password,
-      });
+      })) as unknown as {
+        user?: { id: string; email: string; role: string; display_name?: string };
+        landing?: string;
+        id?: string;
+        email?: string;
+        role?: string;
+      };
+      // Story contract: { user, landing }. Tolerate the legacy flat shape.
+      const user = raw.user ?? {
+        id: raw.id ?? '',
+        email: raw.email ?? this.email,
+        role: raw.role ?? 'USER',
+      };
       this.auth.setUser({
-        id: result.id,
-        email: result.email,
-        name: result.email.split('@')[0],
-        role: this.mapRole(result.role),
+        id: user.id,
+        email: user.email,
+        name: user.display_name || user.email.split('@')[0],
+        role: this.mapRole(user.role),
       });
-      // Route based on role.
-      // on the layout route is the single source of truth and bounces
-      // unfinished-intake users back to their spot in the conversation.
-      if (this.auth.hasAdminRole()) {
-        this.router.navigate(['/admin/overview']);
+      // Every role lands on its project list (/projects), or the server's
+      // landing when it is an internal path.
+      // returnUrl round-trip: when the session-expiry redirect carried the
+      // interrupted destination, resume there instead of the default.
+      // INTERNAL paths only — '/x...' but not '//x' — so neither value can
+      // become an open redirect.
+      const isInternal = (p: string | null | undefined): p is string =>
+        !!p && p.startsWith('/') && !p.startsWith('//');
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+      if (isInternal(returnUrl)) {
+        this.router.navigateByUrl(returnUrl);
       } else {
-        // returnUrl round-trip: when the session-expiry redirect carried the
-        // interrupted destination (e.g. /integrations), resume there instead
-        // of the default. INTERNAL paths only — '/x...' but not '//x' — so
-        // the query param can never become an open redirect.
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-        if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
-          this.router.navigateByUrl(returnUrl);
-        } else {
-          this.router.navigate(['/dashboard']);
-        }
+        this.router.navigateByUrl(isInternal(raw.landing) ? raw.landing : '/projects');
       }
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         this.error.set(
-          'Invalid email or password',
+          'Invalid credentials',
         );
       } else if (err instanceof BadRequestError) {
         this.error.set(
@@ -249,7 +258,7 @@ export class LoginComponent {
             role: 'USER',
           },
     );
-    this.router.navigate([isAdmin ? '/admin/overview' : '/dashboard']);
+    this.router.navigate(['/projects']);
   }
 
   private mapRole(

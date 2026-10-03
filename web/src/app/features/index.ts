@@ -16,6 +16,13 @@ import { authGuard } from '../shared/auth.guard';
  * Or add routes here directly.
  */
 export const FEATURE_ROUTES: Routes = [
+  // Story: Authentication and Roles — public invitation acceptance
+  {
+    path: 'accept-invite/:token',
+    loadComponent: () =>
+      import('./authentication-and-roles/accept-invite.component').then(m => m.AcceptInviteComponent),
+    data: { hideSupportFooter: true },
+  },
   // Story: Active Question Chats
   {
     path: 'projects/:id/questions',

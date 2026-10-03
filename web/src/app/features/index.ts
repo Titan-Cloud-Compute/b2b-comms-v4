@@ -16,19 +16,6 @@ import { authGuard } from '../shared/auth.guard';
  * Or add routes here directly.
  */
 export const FEATURE_ROUTES: Routes = [
-  // Story: File Explorer
-  {
-    path: 'projects/:id/files',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./file-explorer/file-explorer.component').then(m => m.FileExplorerComponent),
-  },
-  {
-    path: 'projects/:id/files/:folderId',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./file-explorer/file-explorer.component').then(m => m.FileExplorerComponent),
-  },
   // Story: Active Question Chats
   {
     path: 'projects/:id/questions',
@@ -61,6 +48,18 @@ export const FEATURE_ROUTES: Routes = [
         loadComponent: () =>
           import('./projects-and-external-organization-spaces/project-list.component')
             .then(m => m.ProjectListComponent),
+      },
+      // Story: File Explorer — /projects/:id/files and /projects/:id/files/:folderId,
+      // rendered inside the app shell (LayoutComponent) behind authGuard.
+      {
+        path: ':id/files',
+        loadComponent: () =>
+          import('./file-explorer/file-explorer.component').then(m => m.FileExplorerComponent),
+      },
+      {
+        path: ':id/files/:folderId',
+        loadComponent: () =>
+          import('./file-explorer/file-explorer.component').then(m => m.FileExplorerComponent),
       },
       {
         path: ':id',

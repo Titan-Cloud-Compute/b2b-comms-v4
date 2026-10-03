@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../shared/auth.service';
 import {
   InvitationResponse,
@@ -11,7 +11,7 @@ import {
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     @if (error()) { <p class="error" role="alert" data-testid="project-error">{{ error() }}</p> }
     @if (project(); as p) {
@@ -49,8 +49,9 @@ import {
           }
         }
 
-        <section data-testid="file-explorer" class="file-explorer">
+        <section data-testid="project-files" class="file-explorer">
           <h2>Files</h2>
+          <a data-testid="open-file-explorer" [routerLink]="['/projects', p.id, 'files']">Open files</a>
         </section>
         <section data-testid="chat-area" class="chat-area">
           <h2>Chat</h2>

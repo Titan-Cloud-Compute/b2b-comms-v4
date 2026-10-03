@@ -90,10 +90,14 @@ interface MoveTarget { id: string | null; name: string; }
           <span>—</span><span>Folder</span><span></span><span></span>
           <span class="actions">
             <button type="button" data-testid="rename-button" (click)="startRename(f.id, f.name)">Rename</button>
-            <select data-testid="move-select" aria-label="Move to" (change)="move('folder', f.id, $event)">
-              <option value="">Move to…</option>
-              @for (t of moveTargets(f.id); track t.id) { <option [value]="t.id ?? '__root__'">{{ t.name }}</option> }
-            </select>
+            @if (movingId() === f.id) {
+              <select data-testid="move-select" aria-label="Move to" (change)="movingId.set(null); move('folder', f.id, $event)">
+                <option value="">Move to…</option>
+                @for (t of moveTargets(f.id); track t.id) { <option [value]="t.id ?? '__root__'">{{ t.name }}</option> }
+              </select>
+            } @else {
+              <button type="button" data-testid="move-button" (click)="movingId.set(f.id)">Move</button>
+            }
             <button type="button" data-testid="delete-button" (click)="remove('folder', f.id)">Delete</button>
           </span>
         </div>
@@ -114,10 +118,14 @@ interface MoveTarget { id: string | null; name: string; }
             <button type="button" data-testid="download-button" (click)="download(f)">Download</button>
             <button type="button" data-testid="versions-button" (click)="openVersions(f)">Versions (v{{ f.version_number }})</button>
             <button type="button" data-testid="rename-button" (click)="startRename(f.id, f.name)">Rename</button>
-            <select data-testid="move-select" aria-label="Move to" (change)="move('file', f.id, $event)">
-              <option value="">Move to…</option>
-              @for (t of moveTargets(null); track t.id) { <option [value]="t.id ?? '__root__'">{{ t.name }}</option> }
-            </select>
+            @if (movingId() === f.id) {
+              <select data-testid="move-select" aria-label="Move to" (change)="movingId.set(null); move('file', f.id, $event)">
+                <option value="">Move to…</option>
+                @for (t of moveTargets(null); track t.id) { <option [value]="t.id ?? '__root__'">{{ t.name }}</option> }
+              </select>
+            } @else {
+              <button type="button" data-testid="move-button" (click)="movingId.set(f.id)">Move</button>
+            }
             <button type="button" data-testid="delete-button" (click)="remove('file', f.id)">Delete</button>
           </span>
         </div>
@@ -184,6 +192,8 @@ export class FileExplorerComponent implements OnInit {
   }
 
   /** Destinations for a move: the project root, parent crumbs and sibling folders (never itself). */
+  movingId = signal<string | null>(null);
+
   moveTargets(excludeId: string | null): MoveTarget[] {
     const crumbs = this.breadcrumbs().filter((c) => c.id !== this.folderId);
     const siblings = this.folders().map((f) => ({ id: f.id as string | null, name: f.name }));

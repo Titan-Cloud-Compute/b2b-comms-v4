@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../shared/auth.service';
+import { ActiveQuestionsComponent } from '../active-question-chats/active-questions.component';
 import {
   InvitationResponse,
   ProjectDetail,
@@ -11,7 +12,7 @@ import {
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ActiveQuestionsComponent],
   template: `
     @if (error()) { <p class="error" role="alert" data-testid="project-error">{{ error() }}</p> }
     @if (project(); as p) {
@@ -55,6 +56,9 @@ import {
         </section>
         <section data-testid="chat-area" class="chat-area">
           <h2>Chat</h2>
+          <section data-testid="active-questions-section">
+            <app-active-questions [projectId]="p.id" />
+          </section>
         </section>
       </section>
     }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiClient, ApiError } from '../../shared/api/api-client';
@@ -11,8 +11,8 @@ import { QuestionSummary, parseSides, questionsApi, registerActiveQuestionMocks 
   imports: [FormsModule, RouterLink],
   template: `
     <section class="aq" data-testid="aq-list-page">
-      <a [routerLink]="['/projects', projectId]" class="aq-back">← Back to project</a>
-      <h2>Active Questions</h2>
+      @if (!embedded) { <a [routerLink]="['/projects', projectId]" class="aq-back">← Back to project</a> }
+      <h2 data-testid="aq-heading">Active Questions</h2>
       @if (error()) { <p class="aq-error" role="alert" data-testid="aq-error">{{ error() }}</p> }
       <ul class="aq-items" data-testid="aq-list">
         @for (q of items(); track q.id) {
@@ -47,7 +47,8 @@ export class ActiveQuestionsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  projectId = '';
+  @Input() projectId = '';
+  embedded = false;
   title = '';
   message = '';
   readonly items = signal<QuestionSummary[]>([]);
@@ -55,7 +56,8 @@ export class ActiveQuestionsComponent implements OnInit {
   readonly busy = signal(false);
 
   ngOnInit(): void {
-    this.projectId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.embedded = !!this.projectId;
+    if (!this.projectId) this.projectId = this.route.snapshot.paramMap.get('id') ?? '';
     registerActiveQuestionMocks(this.api, this.projectId);
     void this.load();
   }
@@ -86,6 +88,7 @@ export class ActiveQuestionsComponent implements OnInit {
       const q = await questionsApi.create(this.api, this.projectId, title, message);
       this.title = '';
       this.message = '';
+      await this.load();
       await this.router.navigate(['/projects', this.projectId, 'questions', q.id]);
     } catch (e) {
       this.error.set(e instanceof ApiError ? e.message : 'Could not open the question.');

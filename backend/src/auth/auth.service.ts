@@ -228,6 +228,11 @@ export class AuthService {
       ok = false;
     }
     if (!ok) throw new UnauthorizedException('invalid credentials');
+    // Deactivated accounts (active === false) are refused with 401. A null
+    // `active` (rows created before the column existed) counts as active.
+    if (user.active === false) {
+      throw new UnauthorizedException('account is inactive');
+    }
 
     return { user, token: await this.issueToken(user) };
   }
@@ -370,6 +375,7 @@ export class AuthService {
       userId: user.id,
       role: user.role,
       firmId: null,
+      organizationId: user.organization_id ?? null,
     };
     return this.jwt.signAsync(payload);
   }

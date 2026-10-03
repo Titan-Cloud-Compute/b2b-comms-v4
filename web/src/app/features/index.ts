@@ -49,6 +49,13 @@ export const FEATURE_ROUTES: Routes = [
           import('./projects-and-external-organization-spaces/project-list.component')
             .then(m => m.ProjectListComponent),
       },
+      // General Channels
+      {
+        path: ':id/channels',
+        loadComponent: () =>
+          import('./general-channels/channels-page.component')
+            .then(m => m.ChannelsPageComponent),
+      },
       {
         path: ':id',
         loadComponent: () =>

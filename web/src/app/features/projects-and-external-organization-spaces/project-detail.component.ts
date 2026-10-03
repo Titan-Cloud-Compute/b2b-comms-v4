@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../shared/auth.service';
+import { ApiClient } from '../../shared/api/api-client';
 import { ActiveQuestionsComponent } from '../active-question-chats/active-questions.component';
 import {
   InvitationResponse,
@@ -56,6 +57,16 @@ import {
         </section>
         <section data-testid="chat-area" class="chat-area">
           <h2>Chat</h2>
+          <section data-testid="general-channels-section" class="general-channels">
+            <h2>General Channels</h2>
+            <ul data-testid="general-channels-list">
+              @for (c of generalChannels(); track c.id) {
+                <li data-testid="general-channel-item">{{ c.name }}</li>
+              } @empty {
+                <li class="gc-empty">No general channels yet.</li>
+              }
+            </ul>
+          </section>
           <section data-testid="active-questions-section">
             <app-active-questions [projectId]="p.id" />
           </section>
@@ -69,6 +80,9 @@ export class ProjectDetailComponent implements OnInit {
   private api = inject(ProjectsApi);
   private auth = inject(AuthService);
   private route = inject(ActivatedRoute);
+  private apiClient = inject(ApiClient);
+
+  generalChannels = signal<{ id: string; name: string; kind?: string }[]>([]);
 
   project = signal<ProjectDetail | null>(null);
   error = signal<string | null>(null);
@@ -94,8 +108,23 @@ export class ProjectDetailComponent implements OnInit {
   private async load(id: string): Promise<void> {
     try {
       this.project.set(await this.api.get(id));
+      void this.loadGeneralChannels(id);
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Could not load project');
+    }
+  }
+
+  private async loadGeneralChannels(id: string): Promise<void> {
+    try {
+      const res = await this.apiClient.get<unknown>(`/api/projects/${id}/channels`, { kind: 'general' });
+      const raw = Array.isArray(res) ? res : ((res as { items?: unknown[] } | null)?.items ?? []);
+      const list = (raw as { id: string; name: string; kind?: string }[]).filter(
+        (c) => !c.kind || c.kind === 'general',
+      );
+      this.generalChannels.set(list);
+    } catch {
+      // General Channels endpoint not available yet — show the empty section.
+      this.generalChannels.set([]);
     }
   }
 

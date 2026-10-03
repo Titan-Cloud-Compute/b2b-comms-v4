@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiClient, ApiError } from '../../shared/api/api-client';
@@ -42,7 +42,7 @@ import { QuestionSummary, parseSides, questionsApi, registerActiveQuestionMocks 
     .aq-error { color: #b00020; }
   `],
 })
-export class ActiveQuestionsComponent implements OnInit {
+export class ActiveQuestionsComponent implements OnInit, OnChanges {
   private readonly api = inject(ApiClient);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -60,6 +60,14 @@ export class ActiveQuestionsComponent implements OnInit {
     if (!this.projectId) this.projectId = this.route.snapshot.paramMap.get('id') ?? '';
     registerActiveQuestionMocks(this.api, this.projectId);
     void this.load();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    const c = changes['projectId'];
+    if (c && !c.firstChange && this.projectId) {
+      registerActiveQuestionMocks(this.api, this.projectId);
+      void this.load();
+    }
   }
 
   sidesOf(q: QuestionSummary) {

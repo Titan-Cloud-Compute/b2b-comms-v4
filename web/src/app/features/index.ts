@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from '../shared/auth.guard';
 
 /**
  * Feature route registry.
@@ -14,4 +15,33 @@ import { Routes } from '@angular/router';
  *
  * Or add routes here directly.
  */
-export const FEATURE_ROUTES: Routes = [];
+export const FEATURE_ROUTES: Routes = [
+  // Projects and External Organization Spaces
+  {
+    path: 'projects',
+    loadComponent: () => import('../shared/layout.component').then(m => m.LayoutComponent),
+    canActivate: [authGuard],
+    data: { rendersSupportFooterInLayout: true },
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./projects-and-external-organization-spaces/project-list.component')
+            .then(m => m.ProjectListComponent),
+      },
+      {
+        path: 'new',
+        loadComponent: () =>
+          import('./projects-and-external-organization-spaces/project-list.component')
+            .then(m => m.ProjectListComponent),
+      },
+      {
+        path: ':id',
+        loadComponent: () =>
+          import('./projects-and-external-organization-spaces/project-detail.component')
+            .then(m => m.ProjectDetailComponent),
+      },
+    ],
+  },
+];

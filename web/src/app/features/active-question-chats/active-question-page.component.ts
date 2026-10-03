@@ -2,6 +2,9 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiClient, ApiError } from '../../shared/api/api-client';
+import { AuthService } from '../../shared/auth.service';
+import { MessageReferenceComponent } from '../message-reference-and-annotation/message-reference.component';
+import { referencesApi, registerReferenceMocks } from '../message-reference-and-annotation/references.api';
 import {
   QuestionMessage,
   QuestionStatus,
@@ -15,7 +18,7 @@ import {
 @Component({
   selector: 'app-active-question-page',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, MessageReferenceComponent],
   template: `
     <section class="aq" data-testid="aq-question-page">
       <a [routerLink]="['/projects', projectId, 'questions']" class="aq-back">← Active Questions</a>
@@ -35,7 +38,12 @@ import {
       @if (error()) { <p class="aq-error" role="alert" data-testid="aq-error">{{ error() }}</p> }
       <ol class="aq-messages" data-testid="aq-messages">
         @for (m of messages(); track m.id) {
-          <li data-testid="aq-message" [innerHTML]="m.body_html"></li>
+          <li data-testid="aq-message">
+            <div [innerHTML]="m.body_html"></div>
+            <app-message-reference [projectId]="projectId" [messageId]="m.id" [referenceId]="m.reference_id"
+                                   [canAdd]="!!currentUserId() && m.author_id === currentUserId()"
+                                   (referenceChange)="setReference(m.id, $event)" />
+          </li>
         }
       </ol>
       @if (status() === 'open') {
@@ -60,6 +68,8 @@ import {
 export class ActiveQuestionPageComponent implements OnInit {
   private readonly api = inject(ApiClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
+  readonly currentUserId = computed(() => this.auth.user()?.id ?? null);
 
   projectId = '';
   questionId = '';
@@ -97,9 +107,28 @@ export class ActiveQuestionPageComponent implements OnInit {
       this.resolvedSides.set(parseSides(q.resolved_sides));
       this.mySide.set(q.my_side === 'external' ? 'external' : 'internal');
       this.messages.set(q.messages ?? []);
+      void this.loadReferences();
     } catch (e) {
       this.fail(e, 'Could not load this question.');
     }
+  }
+
+  /** Attach each message's reference id (if any) so View Reference can be shown. */
+  private async loadReferences(): Promise<void> {
+    const ids = this.messages().map((m) => m.id);
+    if (!ids.length) return;
+    registerReferenceMocks(this.api, this.projectId, undefined, ids);
+    try {
+      const res = await referencesApi.forMessages(this.api, ids);
+      const byMsg = new Map((res?.items ?? []).map((r) => [r.message_id, r.id]));
+      this.messages.update((list) => list.map((m) => ({ ...m, reference_id: byMsg.get(m.id) ?? m.reference_id ?? null })));
+    } catch {
+      /* references are optional decoration; leave messages as-is */
+    }
+  }
+
+  setReference(messageId: string, referenceId: string | null): void {
+    this.messages.update((list) => list.map((m) => (m.id === messageId ? { ...m, reference_id: referenceId } : m)));
   }
 
   async toggleResolve(): Promise<void> {

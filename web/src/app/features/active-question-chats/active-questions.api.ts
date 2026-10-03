@@ -26,6 +26,7 @@ export interface QuestionMessage {
   author_id: string | null;
   body_html: string;
   created_at: string | null;
+  reference_id?: string | null;
 }
 export interface QuestionDetail {
   id: string;

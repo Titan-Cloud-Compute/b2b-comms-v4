@@ -1,12 +1,19 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router, Routes } from '@angular/router';
 import { FEATURE_ROUTES } from './features/index';
 import { authGuard } from './shared/auth.guard';
+import { AuthService } from './shared/auth.service';
+
+/** Signed-in users land on their project list; visitors see the landing page. */
+const homeGuard: CanActivateFn = () =>
+  inject(AuthService).isAuthenticated() ? inject(Router).createUrlTree(['/projects']) : true;
 
 export const routes: Routes = [
   ...FEATURE_ROUTES,
   {
     path: '',
     loadComponent: () => import('./landing/landing.component').then(m => m.LandingComponent),
+    canActivate: [homeGuard],
     pathMatch: 'full'
   },
   {

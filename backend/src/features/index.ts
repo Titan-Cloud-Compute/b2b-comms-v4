@@ -12,6 +12,7 @@
  * Or simply add it here directly.
  */
 import { FileExplorerModule } from './file-explorer/file-explorer.module';
+import { ProjectsAndExternalOrganizationSpacesModule } from './projects-and-external-organization-spaces/projects-and-external-organization-spaces.module';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const FEATURE_MODULES: any[] = [FileExplorerModule];
+export const FEATURE_MODULES: any[] = [FileExplorerModule, ProjectsAndExternalOrganizationSpacesModule];
